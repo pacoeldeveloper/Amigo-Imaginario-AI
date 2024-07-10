@@ -16,6 +16,10 @@ cred = credentials.Certificate("key.json")
 default_app = initialize_app(cred)
 db = firestore.client()
 users = db.collection("users")  # The collection has to be created in the Firestore DB
+forms = db.collection("forms")  # The collection has to be created in the Firestore DB
+friends = db.collection(
+    "friends"
+)  # The collection has to be created in the Firestore DB
 
 # Initialize gemini controller object
 gemini_controller = GeminiController()
@@ -79,6 +83,29 @@ def test_gemini():
         ),
         200,
     )
+
+
+@app.route("/get_all_forms", methods=["GET"])
+def get_all_forms():
+    all_forms = [{**doc.to_dict(), "form_id": doc.id} for doc in forms.stream()]
+    return jsonify(all_forms), 200
+
+
+@app.route("/save_friend_form", methods=["POST"])
+def save_form_response_in_user():
+    data = request.json  # Answers
+    answers = data["answers"]
+    user_id = data["user_id"]
+    friend_name = data["friend_name"]
+    # Create friend
+    friend = friends.document()
+    friend.set({"name": friend_name, "answers": answers})
+    # Register friend_id in user
+    user = users.document(user_id).get().to_dict()
+    user["friends"] = user.get("friends", [])
+    user["friends"].append(friend.id)
+    users.document(user_id).set(user)
+    return jsonify({"message": "Friend created"}), 200
 
 
 if __name__ == "__main__":

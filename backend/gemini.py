@@ -62,7 +62,6 @@ if __name__ == "__main__":
     },
     {
     "What is your friend's favorite color?": ["Blue"]
-    }
     }]'''
 
     exampleBehaviour = gemini_controller.generate_behaviour(userPreferences)
