@@ -15,7 +15,7 @@ app = Flask(__name__)
 cred = credentials.Certificate("key.json")
 default_app = initialize_app(cred)
 db = firestore.client()
-todo_ref = db.collection("todos")
+users = db.collection("users") # The collection has to be created in the Firestore DB
 
 # Initialize gemini controller object
 gemini_controller = GeminiController()
@@ -24,6 +24,46 @@ gemini_controller = GeminiController()
 @app.route("/ping")
 def ping():
     return jsonify({"message": "pong"}), 200
+
+@app.route("/get_all_users", methods=["GET"])
+def get_all_users():
+    all_users = [{**doc.to_dict(), 'user_id': doc.id} for doc in users.stream()]
+    return jsonify(all_users), 200
+
+@app.route("/get_user", methods=["GET"])
+def get_user():
+    user_id = request.args.get("user_id")
+    user = users.document(user_id).get()
+    return jsonify(user.to_dict()), 200
+
+@app.route("/create_user", methods=["POST"])
+def create_user():
+    user_data = request.json
+    user_id = user_data.get("user_id")  # Assuming the client sends a 'user_id'
+    if not user_id:
+        return jsonify({"message": "Missing user_id"}), 400  # Bad request if no user_id
+
+    # Remove the user_id from the data to be stored
+    user_data.pop("user_id", None)
+
+    # Create or overwrite the document with the specified user_id
+    users.document(user_id).set(user_data)
+    
+    return jsonify({"message": "User created"}), 200
+
+@app.route("/update_user", methods=["PUT"])
+def update_user():
+    user = request.json
+    user_id = user["user_id"]
+    user.pop("user_id", None)
+    users.document(user_id).update(user)
+    return jsonify({"message": "User updated"}), 200
+                    
+@app.route("/delete_user", methods=["DELETE"])
+def delete_user():
+    user_id = request.args.get("user_id")
+    users.document(user_id).delete()
+    return jsonify({"message": "User deleted"}), 200
 
 
 @app.route("/test_gemini", methods=["GET"])
